@@ -11,6 +11,18 @@ type Form = typeof empty
 type Slip = { id: string; name_en: string; name_am: string; level_id: string; phone: string; at: Date; yetim: boolean }
 type Row = { id: string; name_en: string; level_id: string; created_at: string }
 
+const Seg = ({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) => (
+  <button type="button" onClick={onClick} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${on ? 'border-emerald bg-emerald text-white' : 'border-slate-200 bg-white hover:border-emerald'}`}>{children}</button>
+)
+
+const Card = ({ t, children }: { t: string; children: React.ReactNode }) => (
+  <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><h2 className="mb-4 border-l-4 border-amber-accent pl-3 text-sm font-bold tracking-wide text-emerald-dark">{t}</h2>{children}</section>
+)
+
+const L = ({ t, req }: { t: string; req?: boolean }) => (
+  <label className="lbl">{t}{req && <span className="text-red-600"> *</span>}</label>
+)
+
 export default function App() {
   const [f, setF] = useState<Form>(empty)
   const [busy, setBusy] = useState(false)
@@ -68,12 +80,6 @@ export default function App() {
   }
   const closeSlip = () => { setSlip(null); if (!nextAfter.current) setF(empty); setDup('idle'); setTimeout(() => first.current?.focus(), 50) }
   const toggleDay = (d: string) => set('tutor_days', f.tutor_days.includes(d) ? f.tutor_days.filter(x => x !== d) : [...f.tutor_days, d])
-
-  const Seg = ({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) =>
-    <button type="button" onClick={onClick} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${on ? 'border-emerald bg-emerald text-white' : 'border-slate-200 bg-white hover:border-emerald'}`}>{children}</button>
-  const Card = ({ t, children }: { t: string; children: React.ReactNode }) =>
-    <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><h2 className="mb-4 border-l-4 border-amber-accent pl-3 text-sm font-bold tracking-wide text-emerald-dark">{t}</h2>{children}</section>
-  const L = ({ t, req }: { t: string; req?: boolean }) => <label className="lbl">{t}{req && <span className="text-red-600"> *</span>}</label>
 
   return (<div className="min-h-screen">
     <header className="bg-slate-deep text-white noprint"><div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
