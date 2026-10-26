@@ -4,11 +4,11 @@ import { supabase } from './supabase'
 import { ACADEMIC_YEAR, DAYS, FEE, LEVELS, Gender, levelId, levelName } from './constants'
 import { LOGO_BASE64 } from './logoBase64'
 
-const empty = { name_am:'', name_en:'', gender:'' as ''|Gender, dob:'', school_level:'', level:0, last_page_learnt:'',
+const empty = { name_am:'', name_en:'', gender:'' as ''|Gender, dob:'', age:'', school_level:'', level:0, last_page_learnt:'',
   has_tutor:false, tutor_days:[] as string[], tutor_arrival_time:'', is_yetim:false, parent_name:'', parent_phone:'',
   subcity:'', woreda:'', block:'', house_no:'', emergency_contact:'', medical_notes:'', notes:'' }
 type Form = typeof empty
-type Slip = { id: string; name_en: string; name_am: string; level_id: string; phone: string; at: Date; yetim: boolean }
+type Slip = { age?: string; id: string; name_en: string; name_am: string; level_id: string; phone: string; at: Date; yetim: boolean }
 type Row = { id: string; name_en: string; level_id: string; created_at: string }
 
 const Seg = ({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) => (
@@ -62,7 +62,9 @@ export default function App() {
     if (missing) { setErr('Please complete all required fields (names, gender, level, parent name, phone 09xxxxxxxx).'); return }
     setBusy(true); nextAfter.current = next
     const { data: s, error: e1 } = await supabase.from('students').insert({
-      name_am: f.name_am.trim(), name_en: f.name_en.trim(), gender: f.gender, dob: f.dob || null,
+      name_am: f.name_am.trim(), name_en: f.name_en.trim(), gender: f.gender,
+      age: f.age ? parseInt(f.age, 10) : null,
+      dob: f.age ? (new Date().getFullYear() - parseInt(f.age, 10)) + '-01-01' : (f.dob || null),
       school_level: f.school_level || null, level_id: lid, academic_year: ACADEMIC_YEAR,
       last_page_learnt: f.last_page_learnt || null, has_tutor: f.has_tutor,
       tutor_days: f.has_tutor ? f.tutor_days : [], tutor_arrival_time: f.has_tutor ? f.tutor_arrival_time || null : null,
@@ -74,7 +76,7 @@ export default function App() {
       emergency_contact: f.emergency_contact || null, medical_notes: f.medical_notes || null, notes: f.notes || null })
     setBusy(false)
     if (e2) { setErr(`Student saved (ID ${s.id}) but private details failed: ${e2.message}`); return }
-    setSlip({ id: String(s.id), name_en: f.name_en, name_am: f.name_am, level_id: lid, phone: f.parent_phone, at: new Date(), yetim: f.is_yetim })
+    setSlip({ id: String(s.id), name_en: f.name_en, name_am: f.name_am, level_id: lid, phone: f.parent_phone, age: f.age, at: new Date(), yetim: f.is_yetim })
     loadToday()
     if (next) { setF(empty); setDup('idle') }
   }
@@ -93,7 +95,7 @@ export default function App() {
           <div><L t="Full Name (Amharic) / ሙሉ ስም" req/><input ref={first} className="inp" placeholder="አህመድ ሙሐመድ" value={f.name_am} onChange={e => set('name_am', e.target.value)}/></div>
           <div><L t="Full Name (English)" req/><input className="inp" placeholder="Ahmed Mohammed" value={f.name_en} onChange={e => set('name_en', e.target.value)}/></div>
           <div><L t="Gender / ፆታ" req/><div className="flex gap-2"><Seg on={f.gender==='male'} onClick={() => set('gender','male')}>Male · ወንድ</Seg><Seg on={f.gender==='female'} onClick={() => set('gender','female')}>Female · ሴት</Seg></div></div>
-          <div><L t="Date of Birth / የትውልድ ቀን"/><input type="date" className="inp" value={f.dob} onChange={e => set('dob', e.target.value)}/></div>
+          <div><L t="Age / እድሜ (ዓመት)" req/><input type="number" min="4" max="25" className="inp" placeholder="e.g. 8" value={f.age} onChange={e => set('age', e.target.value)}/></div>
           <div className="sm:col-span-2"><L t="School Grade / የትምህርት ቤት ክፍል"/><input className="inp" placeholder="5th Grade / 5ኛ ክፍል" value={f.school_level} onChange={e => set('school_level', e.target.value)}/></div></div></Card>
 
         <Card t="2 · MEDRESA LEVEL / የመድረሳ ደረጃ"><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -149,7 +151,7 @@ export default function App() {
           <img src={LOGO_BASE64} alt="" className="mx-auto h-20 w-20 rounded-full"/>
           <h2 className="mt-2 text-xl font-bold text-emerald-dark">Abubeker Medresa</h2><p className="text-sm text-slate-600">አቡበከር መድረሳ</p>
           <p className="my-3 inline-block rounded bg-amber-accent px-3 py-1 text-xs font-bold tracking-widest text-white">STUDENT ADMISSION SLIP</p>
-          <dl className="space-y-2 text-left text-sm">{([['Student ID', slip.id],['Name', `${slip.name_en} / ${slip.name_am}`],['Level', levelName(slip.level_id)],
+          <dl className="space-y-2 text-left text-sm">{([['Student ID', slip.id],['Name', `${slip.name_en} / ${slip.name_am}`],['Level', levelName(slip.level_id)], ['Age', slip.age ? `${slip.age} yrs` : '---'],
             ['Fee', slip.yetim ? 'Yetim Sponsored · 0 ETB' : `Regular · ${FEE.regular} ETB`],['Parent Phone', slip.phone],['Date', slip.at.toLocaleString()],['Academic Year', ACADEMIC_YEAR]]).map(([k, v]) =>
             <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-300 pb-1"><dt className="text-slate-500">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>)}</dl>
           <p className="mt-6 border-t border-slate-400 pt-1 text-xs text-slate-500">Registrar signature / ፊርማ</p></div></div></div>}
