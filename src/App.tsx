@@ -61,19 +61,45 @@ export default function App() {
     setErr('')
     if (missing) { setErr('Please complete all required fields (names, gender, level, parent name, phone 09xxxxxxxx).'); return }
     setBusy(true); nextAfter.current = next
+    const fullAddress = [
+      f.subcity ? `Subcity: ${f.subcity}` : '',
+      f.woreda ? `W:${f.woreda}` : '',
+      f.block ? `B:${f.block}` : '',
+      f.house_no ? `H:${f.house_no}` : ''
+    ].filter(Boolean).join(', ') || null;
+
     const { data: s, error: e1 } = await supabase.from('students').insert({
-      name_am: f.name_am.trim(), name_en: f.name_en.trim(), gender: f.gender,
+      name_am: f.name_am.trim(),
+      name_en: f.name_en.trim(),
+      gender: f.gender,
       age: f.age ? parseInt(f.age, 10) : null,
       dob: f.age ? (new Date().getFullYear() - parseInt(f.age, 10)) + '-01-01' : (f.dob || null),
-      school_level: f.school_level || null, level_id: lid, academic_year: ACADEMIC_YEAR,
-      last_page_learnt: f.last_page_learnt || null, has_tutor: f.has_tutor,
-      tutor_days: f.has_tutor ? f.tutor_days : [], tutor_arrival_time: f.has_tutor ? f.tutor_arrival_time || null : null,
-      is_yetim: f.is_yetim }).select('id').single()
-    if (e1 || !s) { setBusy(false); setErr('Could not save student: ' + (e1?.message ?? 'unknown error')); return }
+      school_level: f.school_level || null,
+      level_id: lid,
+      academic_year: ACADEMIC_YEAR,
+      last_page_learnt: f.last_page_learnt || null,
+      has_tutor: f.has_tutor ? 1 : 0,
+      tutor_days: f.has_tutor && f.tutor_days.length > 0 ? f.tutor_days.join(', ') : null,
+      tutor_arrival_time: f.has_tutor ? f.tutor_arrival_time || null : null,
+      is_yetim: f.is_yetim ? 1 : 0,
+      is_active: 1,
+      notes: f.notes || null
+    }).select('id').single();
+
+    if (e1 || !s) {
+      setBusy(false);
+      setErr('Could not save student: ' + (e1?.message ?? 'unknown error'));
+      return;
+    }
+
     const { error: e2 } = await supabase.from('student_private').insert({
-      student_id: s.id, parent_name: f.parent_name.trim(), parent_phone: f.parent_phone.trim(),
-      subcity: f.subcity || null, woreda: f.woreda || null, block: f.block || null, house_no: f.house_no || null,
-      emergency_contact: f.emergency_contact || null, medical_notes: f.medical_notes || null, notes: f.notes || null })
+      student_id: s.id,
+      parent_name: f.parent_name.trim(),
+      parent_phone: f.parent_phone.trim(),
+      address: fullAddress,
+      emergency_contact: f.emergency_contact || null,
+      medical_notes: f.medical_notes || null
+    });
     setBusy(false)
     if (e2) { setErr(`Student saved (ID ${s.id}) but private details failed: ${e2.message}`); return }
     setSlip({ id: String(s.id), name_en: f.name_en, name_am: f.name_am, level_id: lid, phone: f.parent_phone, age: f.age, at: new Date(), yetim: f.is_yetim })
